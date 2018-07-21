@@ -1,0 +1,45 @@
+---
+
+- name: Setup Developer Account
+  user: name="{{username}}" state=present
+  sudo: yes
+
+- name: Setup SSH Keys
+  sudo: yes
+  sudo_user: "{{username}}"
+  authorized_key: user="{{username}}" key="{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+
+- name: Install standard development toolset
+  yum: name="{{ item }}" state=present
+  with_items: 
+    - ctags-etags.x86_64
+    - tmux.x86_64
+    - java-1.7.0-openjdk-devel.x86_64
+  sudo: yes
+
+- name: Install Development Tools
+  yum: name="@Development tools" state=present
+  sudo: yes
+
+- name: Check for Virtualenv
+  stat: path="/home/{{username}}/.venvburrito/startup.sh"
+  sudo: yes
+  sudo_user: "{{username}}"
+  register: virtualenv
+
+- include: virtualenv.yml
+  when: virtualenv.stat.exists == False
+
+- include: rvm.yml
+
+- name: Check for VIM Configuration
+  stat: path="/home/{{username}}/.vim"
+  sudo: yes
+  sudo_user: "{{username}}"
+  register: vim
+
+- include: vim.yml
+  when: vim.stat.exists == False
+
+  

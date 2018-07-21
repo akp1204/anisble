@@ -1,0 +1,13 @@
+[Unit]
+Description=MyGLOS
+Documentation=http://github.com/asascience/myglos/
+After=network.target
+
+[Service]
+Type=simple
+User=myglos
+ExecStart=/bin/bash -c 'cd /var/www/html/myglos; source /usr/local/lib/virtualenv/myglos/bin/activate; gunicorn -w 4 -b localhost:3000 app:app'
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,59 @@
+---
+- name: Install the development tools
+  sudo: yes
+  yum: name="@Development tools" state=present
+
+- name: Install development packages
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - vim-enhanced.x86_64
+    - tmux.x86_64
+    - git.x86_64
+    - the_silver_searcher.x86_64
+    - curl.x86_64
+    - python-devel.x86_64
+    - gcc
+    - openssl-devel
+    - git
+    - libxml2-devel
+    - libxslt-devel
+    - libcurl-devel
+    - sqlite-devel
+    - readline-devel
+    - db4-devel
+    - db4-devel-static
+    - bzip2-devel
+    - freetype-devel
+    - libpng-devel
+    - gcc-c++
+    - wget
+    - zsh
+
+
+- name: Check for VIM Configuration
+  stat: path="/home/{{user}}/.vim"
+  register: vim
+
+- include: vim.yml
+  when: vim.stat.exists == False
+
+- name: Check for tmux
+  stat: path="/home/{{user}}/.tmux"
+  register: tmux
+
+- name: Install tmux config
+  shell: curl https://raw.githubusercontent.com/lukecampbell/tmux-config/master/install.sh | bash -s stable
+  when: tmux.stat.exists == False
+
+- name: Check for zshrc
+  stat: path="/home/{{user}}/.zshrc"
+  register: zshrc
+
+- name: Install zsh config
+  shell: curl https://raw.githubusercontent.com/lukecampbell/oh-my-zsh/master/install.sh | bash -s stable
+  when: zshrc.stat.exists == False
+
+- name: Chance default shell to zsh
+  sudo: yes
+  command: chsh -s /usr/bin/zsh {{user}}

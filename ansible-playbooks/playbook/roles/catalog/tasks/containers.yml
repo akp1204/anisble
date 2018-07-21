@@ -1,0 +1,131 @@
+---
+
+- name: redis container
+  sudo: yes
+  docker: 
+    name: redis
+    image: redis
+    state: started
+
+- name: solr container
+  sudo: yes
+  docker:
+    name: solr
+    image: lukecampbell/docker-ckan-solr
+    state: started
+
+- name: postgis container
+  sudo: yes
+  docker:
+    name: postgis
+    image: lukecampbell/docker-postgis
+    ports:
+    - "5432:5432"
+    env:
+      POSTGRES_USER: ckanadmin
+      POSTGRES_PASS: ckanadmin
+      POSTGRES_DB: ckan
+    state: started
+
+- name: Wait for the containers to start
+  pause: minutes=2
+
+- name: create ckan user
+  postgresql_user:
+    db: postgres
+    name: ckan
+    login_user: ckanadmin
+    login_password: ckanadmin
+    password: ckanpass
+    port: 5432
+    login_host: localhost
+    role_attr_flags: CREATEROLE,LOGIN
+    state: present
+
+- name: Create the CKAN database
+  postgresql_db:
+    name: ckan
+    encoding: 'UTF-8'
+    template: 'template0'
+    owner: ckan
+    login_host: localhost
+    login_user: ckanadmin
+    login_password: ckanadmin
+    port: 5432
+    state: present
+
+- name: Create extension
+  postgresql_ext:
+    db: ckan
+    name: postgis
+    login_host: localhost
+    login_user: ckanadmin
+    login_password: ckanadmin
+    port: 5432
+    state: present
+
+- name: CKAN container
+  sudo: yes
+  docker:
+    name: ioos-catalog
+    image: lukecampbell/docker-ioos-catalog
+    ports:
+    - "3000:80"
+    links:
+    - "solr:solr"
+    - "redis:redis"
+    - "postgis:db"
+    state: started
+
+- name: Set up systemd for docker
+  sudo: yes
+  command: systemctl enable docker.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Copy docker.redis.service
+  sudo: yes
+  copy:
+    src: docker.redis.service
+    dest: /usr/lib/systemd/system/docker.redis.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Set up systemd for docker.redis.service
+  sudo: yes
+  command: systemctl enable docker.redis.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Copy docker.solr.service
+  sudo: yes
+  copy:
+    src: docker.solr.service
+    dest: /usr/lib/systemd/system/docker.solr.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Set up systemd for docker.solr.service
+  sudo: yes
+  command: systemctl enable docker.solr.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Copy docker.postgis.service
+  sudo: yes
+  copy:
+    src: docker.postgis.service
+    dest: /usr/lib/systemd/system/docker.postgis.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Set up systemd for docker.postgis.service
+  sudo: yes
+  command: systemctl enable docker.postgis.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Copy docker.ckan.service
+  sudo: yes
+  copy:
+    src: docker.ckan.service
+    dest: /usr/lib/systemd/system/docker.ckan.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Set up systemd for docker.ckan.service
+  sudo: yes
+  command: systemctl enable docker.ckan.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")

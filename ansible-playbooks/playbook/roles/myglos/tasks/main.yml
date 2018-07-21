@@ -1,0 +1,287 @@
+---
+- name: Install packages for myglos
+  yum: name={{item}} state=present
+  sudo: yes
+  with_items:
+    - spatialindex-devel.x86_64
+    - redis
+    - rsync
+
+- name: Setup myglos user account
+  user: name=myglos state=present
+  sudo: yes
+
+- name: Copy the private key
+  copy: src=local_configs/github dest=/home/{{user}}/.ssh/github mode=0600
+
+- name: Copy the public key
+  copy: src=local_configs/github.pub dest=/home/{{user}}/.ssh/github.pub mode=0600
+
+- name: Check for catalog source code
+  stat: path=/usr/local/src/glos-catalog/app.py
+  register: catalog
+
+- name: Create catalog directory
+  sudo: yes
+  file:
+    path: /usr/local/src/glos-catalog
+    owner: "{{ user }}"
+    group: wheel
+    mode: 0755
+    state: directory
+  when: catalog.stat.exists == False
+
+- name: Get catalog source
+  git: 
+    repo: https://github.com/asascience-open/portal-catalog.git
+    dest: /usr/local/src/glos-catalog
+    key_file: /home/{{user}}/.ssh/github
+  when: catalog.stat.exists == False
+
+- name: Set catalog owner to myglos
+  sudo: yes
+  command: chown -R myglos:myglos /usr/local/src/glos-catalog
+  when: catalog.stat.exists == False
+
+- name: Check for myglos source code
+  stat: path=/usr/local/src/myglos/app.py
+  register: myglos
+
+- name: Create myglos directory
+  sudo: yes
+  file:
+    path: /usr/local/src/myglos
+    owner: "{{ user }}"
+    group: wheel
+    mode: 0755
+    state: directory
+  when: myglos.stat.exists == False
+
+- name: Get the myglos source
+  git: 
+    repo: ssh://git@github.com/asascience/oceansmap.git
+    dest: /usr/local/src/myglos
+    accept_hostkey: True
+    key_file: /home/{{user}}/.ssh/github
+  when: myglos.stat.exists == False
+
+- name: Check out the myglos branch
+  shell: "cd /usr/local/src/myglos && git checkout myglos"
+  when: myglos.stat.exists == False
+
+- name: Set myglos project owner to myglos
+  sudo: yes
+  command: chown -R myglos:myglos /usr/local/src/myglos
+  when: catalog.stat.exists == False
+
+- name: Check for virtualenv
+  stat: path=/usr/local/lib/virtualenv/myglos/bin/activate
+  register: venv
+
+- name: Create virtualenv for the project
+  sudo: yes
+  shell: virtualenv /usr/local/lib/virtualenv/myglos
+  when: venv.stat.exists == False
+
+- name: Install numpy
+  shell: "source /usr/local/lib/virtualenv/myglos/bin/activate; /usr/local/lib/virtualenv/myglos/bin/pip install numpy"
+  sudo: yes
+
+- name: Install catalog requirements
+  sudo: yes
+  shell: /usr/local/lib/virtualenv/myglos/bin/pip install -r /usr/local/src/glos-catalog/requirements/standalone.txt
+
+- name: Install myglos requirements
+  sudo: yes
+  shell: /usr/local/lib/virtualenv/myglos/bin/pip install -r /usr/local/src/myglos/requirements/requirements.txt
+
+- name: Install gunicorn
+  sudo: yes
+  shell: /usr/local/lib/virtualenv/myglos/bin/pip install gunicorn
+
+- name: Upgrade numpy
+  shell: "source /usr/local/lib/virtualenv/myglos/bin/activate; /usr/local/lib/virtualenv/myglos/bin/pip install -U numpy"
+  sudo: yes
+
+- name: Create logging directory for myglos
+  sudo: yes
+  file: 
+    path: /var/log/myglos
+    state: directory
+    owner: myglos
+    mode: 0700
+
+- name: Create logging directory for catalog
+  sudo: yes
+  file: 
+    path: /var/log/glos-catalog
+    state: directory
+    owner: myglos
+    mode: 0700
+
+- name: Create index directory for catalog
+  sudo: yes
+  file: 
+    path: /var/run/whoosh
+    state: directory
+    owner: myglos
+    mode: 0700
+
+- name: Enable redis as a service
+  sudo: yes
+  command: systemctl enable redis.service
+
+- name: Start redis
+  sudo: yes
+  command: systemctl start redis.service
+
+- name: Check for exapmle nginx file
+  stat: path=/etc/nginx/conf.d/example.conf
+  register: nginx_example
+
+- name: Remove example nginx config
+  command: rm -rf /etc/nginx/conf.d/example.conf
+  sudo: yes
+  when: nginx_example.stat.exists == True
+
+- name: Apply nginx configuration
+  template: src=myglos.conf.j2 dest=/etc/nginx/conf.d/myglos.conf
+  sudo: yes
+
+- name: Apply myglos configuration
+  copy: src=local_configs/myglos.config.local.yml dest=/usr/local/src/myglos/config.local.yml owner=myglos group=myglos mode=0644
+  sudo: yes
+
+- name: Copy update_catalog.sh to /usr/local/src/glos-catalog/
+  copy: src=roles/myglos/files/update_catalog.sh dest=/usr/local/src/glos-catalog/update_catalog.sh owner=myglos group=myglos mode=0755
+  sudo: yes
+
+- name: Apply catalog configuration
+  copy: src=local_configs/catalog.config.local.yml dest=/usr/local/src/glos-catalog/config.local.yml owner=myglos group=myglos mode=0644
+  sudo: yes
+
+- name: Create deployment directory for glos-catalog
+  file: path=/var/www/html/glos-catalog owner=myglos group=myglos state=directory mode=0755
+  sudo: yes
+
+- name: Copy glos-catalog to /var/www/html/glos-catalog
+  shell: "cd /usr/local/src/glos-catalog && rsync -av --exclude .git ./ /var/www/html/glos-catalog"
+  sudo: yes
+  sudo_user: myglos
+
+- name: Create deployment directory for myglos
+  file: path=/var/www/html/myglos owner=myglos group=myglos state=directory mode=0755
+  sudo: yes
+
+- name: Copy myglos to /var/www/html/myglos
+  shell: "cd /usr/local/src/myglos && rsync -av --exclude .git ./ /var/www/html/myglos"
+  sudo: yes
+  sudo_user: myglos
+
+- name: Add service entry for catalog
+  copy: src=roles/myglos/files/glos-catalog.service dest=/usr/lib/systemd/system/glos-catalog.service
+  sudo: yes
+
+- name: Add service entry for myglos
+  copy: src=roles/myglos/files/myglos.service dest=/usr/lib/systemd/system/myglos.service
+  sudo: yes
+
+- name: Install node packages for myglos
+  shell: cd /var/www/html/myglos; /usr/local/bin/npm install creates=/var/www/html/myglos/node_modules
+  sudo: yes
+  sudo_user: myglos
+
+- name: override .bowerrc
+  copy: src=roles/myglos/files/bowerrc dest=/var/www/html/myglos/.bowerrc
+  sudo: yes
+  sudo_user: myglos
+
+- name: Install bower
+  shell: /usr/local/bin/npm install -g bower
+  args:
+    creates: /usr/local/bin/bower
+  sudo: yes
+
+- name: Install grunt
+  shell: /usr/local/bin/npm install -g grunt-cli
+  args:
+    creates: /usr/local/bin/grunt
+  sudo: yes
+
+- name: Use HTTPS instead of git protocol
+  shell: git config --global url.https://.insteadOf git://
+  sudo: yes
+  sudo_user: myglos
+
+#- name: Install bower packages for myglos
+#  shell: "cd /var/www/html/myglos; /usr/local/bin/bower install --config.interactive=false" 
+#  args:
+#    creates: /var/www/html/myglos/oceansmap/static/lib/backbone
+#  environment:
+#    PATH: "{{ ansible_env.PATH}}:/usr/local/bin"
+#  sudo: yes
+#  sudo_user: myglos
+
+- name: Compile javascript sources
+  shell: cd /var/www/html/myglos; /usr/local/bin/grunt creates=/var/www/html/myglos/oceansmap/static/js/compiled/catalog.js
+  environment:
+    PATH: "{{ ansible_env.PATH}}:/usr/local/bin"
+  sudo: yes
+  sudo_user: myglos
+
+- name: Compile catalog
+  shell: "cd /var/www/html/glos-catalog; source /usr/local/lib/virtualenv/myglos/bin/activate; python download_catalog.py"
+  sudo: yes
+  sudo_user: myglos
+
+- name: Enable nginx service
+  shell: systemctl enable nginx.service
+  sudo: yes
+
+- name: Enable myglos service
+  shell: systemctl enable myglos.service
+  sudo: yes
+
+- name: Enable catalog service
+  shell: systemctl enable glos-catalog.service
+  sudo: yes
+
+- name: Patch SELinux
+  sudo: yes
+  command: setsebool httpd_can_network_connect 1
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+    
+- name: Open port 80
+  sudo: yes
+  command: firewall-cmd --zone=public --add-port=80/tcp --permanent
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Reload firewall settings
+  sudo: yes
+  command: firewall-cmd --reload
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Start nginx
+  service: name=nginx state=started
+  sudo: yes
+
+- name: Start myglos
+  service: name=myglos state=started
+  sudo: yes
+
+- name: Start glos-catalog
+  service: name=glos-catalog state=started
+  sudo: yes
+
+- name: Copy crontab
+  copy: src=roles/myglos/files/myglos.crontab dest=/home/myglos/crontab owner=myglos group=myglos mode=0644
+  sudo: yes
+
+- name: Apply crontab
+  shell: crontab /home/myglos/crontab
+  sudo: yes
+  sudo_user: myglos
+
+- name: Copy catalog-restart to cron folder
+  copy: src=roles/myglos/files/restart_catalog.sh dest=/etc/cron.hourly/7restart_catalog mode=0755
+  sudo: yes

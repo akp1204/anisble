@@ -1,0 +1,5 @@
+*.pyc
+*.swp
+*.swo
+hosts
+playbook/local_configs/

@@ -1,0 +1,9 @@
+---
+- hosts: all
+  remote_user: '{{ user }}'
+  roles:
+    - epel
+    - python27
+    - web
+  vars:
+    username: dev

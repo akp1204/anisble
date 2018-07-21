@@ -1,0 +1,11 @@
+---
+
+- name: Check for Docker installed
+  command: rpm -q docker-engine.x86_64
+  ignore_errors: True
+  register: docker
+
+- include: docker.yml
+  failed_when: docker.rc > 1
+  when: docker.rc == 1
+

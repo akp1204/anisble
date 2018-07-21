@@ -1,0 +1,49 @@
+---
+
+- name: Install DAP-only System Packages
+  yum: name={{ item }} state=present
+  sudo: yes
+  with_items:
+    - nginx
+
+- name: Setup Tomcat Group
+  sudo: yes
+  group: name=tomcat state=present
+
+- name: Setup Data Group
+  sudo: yes
+  group: name=data state=present
+
+- name: Setup Tomcat User
+  sudo: yes
+  user: name=tomcat state=present group=tomcat groups=tomcat,data home=/var/tomcats
+
+- name: Download Tomcat
+  sudo: yes
+  sudo_user: tomcat
+  get_url: url=http://mirrors.gigenet.com/apache/tomcat/tomcat-7/v7.0.56/bin/apache-tomcat-7.0.56.tar.gz dest=/var/tomcats/apache-tomcat-7.0.56.tar.gz
+
+- name: Extract Tomcat
+  sudo: yes
+  sudo_user: tomcat
+  command: tar xvfz apache-tomcat-7.0.56.tar.gz
+  args:
+    chdir: /var/tomcats/
+    creates: /var/tomcats/apache-tomcat-7.0.56
+
+- name: Remove Default Tomcat Webapps
+  sudo: yes
+  sudo_user: tomcat
+  shell: rm -r apache-tomcat-7.0.56/webapps/*
+  args:
+    chdir: /var/tomcats/
+    removes: /var/tomcats/apache-tomcat-7.0.56/webapps/ROOT
+
+- include: tomcat.yml tomcat_dir=erddap offset=0 url_path=erddap
+- include: erddap.yml tomcat_dir=erddap catalog_name=erddap
+
+- name: Configure nginx reverse proxies
+  sudo: yes
+  template: src=nginx.conf.j2 dest=/etc/nginx/nginx.conf
+  notify:
+    - restart nginx

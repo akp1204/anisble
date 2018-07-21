@@ -1,0 +1,17 @@
+[Unit]
+Description=IOOS Catalog Container
+After=docker.postgis.service docker.solr.service docker.redis.service
+Requires=docker.postgis.service docker.solr.service docker.redis.service
+
+[Service]
+TimeoutStartSec=0
+ExecStart=/usr/bin/docker run --name "ioos-catalog" \
+    --link solr:solr \
+    --link redis:redis \
+    --link postgis:db \
+    -p 3002:80 \
+    lukecampbell/docker-ioos-catalog
+ExecStop=/usr/bin/docker stop -t 15 ioos-catalog; /usr/bin/docker rm -f ioos-catalog
+
+[Install]
+WantedBy=multi-user.target

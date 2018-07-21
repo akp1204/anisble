@@ -1,0 +1,11 @@
+---
+- hosts: all
+  remote_user: '{{ user }}'
+  roles:
+    - epel
+    - lamp
+    - wordpress
+  vars:
+    wordpress_user: wordpress
+    wordpress_pass: w0rdpr3$$
+

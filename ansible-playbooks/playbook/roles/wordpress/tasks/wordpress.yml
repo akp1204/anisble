@@ -1,0 +1,16 @@
+---
+
+- name: Get source code for latest wordpress
+  get_url: url=http://wordpress.org/latest.tar.gz dest=/tmp/latest.tar.gz force=no
+
+- name: Extract source code for wordpress
+  sudo: yes
+  command: tar -zxvf /tmp/latest.tar.gz chdir=/usr/local/src creates=/usr/local/src/wordpress
+
+- name: Install wordpress
+  sudo: yes
+  command: rsync -avP /usr/local/src/wordpress/ /var/www/html/ creates=/var/www/html/index.php
+
+- name: Configure wordpress
+  sudo: yes
+  template: src=wp-config.php.j2 dest=/var/www/html/wp-config.php

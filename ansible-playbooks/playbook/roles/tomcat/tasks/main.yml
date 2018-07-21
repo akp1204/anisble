@@ -1,0 +1,19 @@
+---
+
+- name: Setup tomcat Account
+  user: name=tomcat state=present
+  sudo: yes
+
+- name: Install java JDk
+  yum: name={{ item }} state=present
+  with_items: 
+    - java-1.7.0-openjdk-devel.x86_64
+  sudo: yes
+
+- name: Check for THREDDS
+  stat: path=/home/tomcat/thredds/webapps/thredds.war
+  register: thredds
+  sudo: yes
+
+- include: tomcat.yml
+  when: thredds.stat.exists == False

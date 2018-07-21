@@ -1,0 +1,48 @@
+---
+
+- name: Install packages
+  yum: name={{ item }} state=present
+  sudo: yes
+  with_items:
+    - httpd.x86_64
+    - mariadb-server.x86_64
+    - mariadb.x86_64
+    - expect.x86_64
+    - php.x86_64
+    - php-mysql.x86_64
+
+- name: Enable systemd for httpd
+  sudo: yes
+  command: systemctl enable httpd.service
+
+- name: Enable systemd for mariadb
+  sudo: yes
+  command: systemctl enable mariadb.service
+
+- name: Start mariadb
+  sudo: yes
+  service: name=mariadb state=started
+
+- name: Let mariadb warm up
+  pause: seconds=15
+
+- name: Secure mariadb
+  sudo: yes
+  script: secure_mariadb.expect
+  register: secure_mariadb
+
+- name: Patch SELinux
+  sudo: yes
+  command: setsebool httpd_can_network_connect 1
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Open port 80
+  sudo: yes
+  command: firewall-cmd --zone=public --add-port=80/tcp --permanent
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Reload firewall settings
+  sudo: yes
+  command: firewall-cmd --reload
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+

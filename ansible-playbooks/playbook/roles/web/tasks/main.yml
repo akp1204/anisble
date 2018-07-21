@@ -1,0 +1,26 @@
+---
+
+- name: Install nginx Packages
+  yum: name={{ item }} state=present
+  sudo: yes
+  with_items: 
+    - nginx
+
+- name: Setup nginx Account
+  user: name=nginx state=present
+  sudo: yes
+
+- name: Check for NodeJS
+  stat: path=/usr/local/bin/grunt
+  register: nodejs
+
+- include: nodejs.yml
+  when: nodejs.stat.exists == False
+
+- name: Check for nginx configurations
+  stat: path=/etc/nginx/conf.d/example.conf
+  register: nginx_conf
+
+- include: nginx.yml
+  when: nginx_conf.stat.exists == False
+

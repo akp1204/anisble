@@ -1,0 +1,48 @@
+---
+
+- name: Install the development tools
+  sudo: yes
+  yum: name="@Development tools" state=present
+
+- name: Install System Packages
+  yum: name={{ item }} state=present
+  sudo: yes
+  with_items:
+    #    - gcc-devel
+    - gcc
+    - openssl-devel
+    - git
+    - libxml2-devel
+    - libxslt-devel
+    - libcurl-devel
+    - sqlite-devel
+    - readline-devel
+    - bzip2-devel
+    - freetype-devel
+    - libpng-devel
+    - gcc-c++
+
+- name: Install berkley db packages
+  yum: name={{ item }} state=present
+  sudo: yes
+    - db4-devel
+    - db4-devel-static
+  when: ansible_distribution == "Amazon"
+
+- name: Check for python 27
+  stat: path=/usr/local/bin/python27
+  register: p27
+
+- include: python27.yml
+  when: p27.stat.exists == False and ansible_distribution == "Amazon"
+
+- name: Install python
+  yum: name=python-devel state=present
+  sudo: yes
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Install virtualenv
+  pip: name=virtualenv
+  sudo: yes
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+

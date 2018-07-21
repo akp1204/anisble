@@ -1,0 +1,23 @@
+---
+
+# this should possibly be a module that just check whether python 2.7 is there before doing anything
+- name: Download tomcat
+  get_url: url=http://mirror.cogentco.com/pub/apache/tomcat/tomcat-7/v7.0.61/bin/apache-tomcat-7.0.61.tar.gz dest=/home/tomcat/apache-tomcat-7.0.61.tar.gz owner=tomcat group=tomcat force=no timeout=120
+  sudo: yes
+  sudo_user: tomcat
+
+- name: Extract tomcat
+  command: /bin/tar -xzf /home/tomcat/apache-tomcat-7.0.61.tar.gz chdir=/home/tomcat creates=/home/tomcat/apache-tomcat-7.0.61
+  sudo: yes
+  sudo_user: tomcat
+
+- name: Move to thredds directory
+  command: /bin/mv /home/tomcat/apache-tomcat-7.0.61 /home/tomcat/thredds creates=/home/tomcat/thredds
+  sudo: yes
+  sudo_user: tomcat
+
+- name: Get the THREDDS WAR
+  get_url: url=ftp://ftp.unidata.ucar.edu/pub/thredds/4.3/current/thredds.war dest=/home/tomcat/thredds/webapps owner=tomcat group=tomcat force=no
+  sudo: yes
+  sudo_user: tomcat
+

@@ -1,0 +1,25 @@
+---
+
+- name: Add the ES publick key
+  sudo: yes
+  command: rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch
+
+- name: Add a repo for elasticsearch
+  sudo: yes
+  copy:
+    src: elasticsearch.repo
+    dest: /etc/yum.repos.d/elasticsearch.repo
+
+- name: Install elasticsearch
+  yum: name=elasticsearch state=present
+  sudo: yes
+
+- name: Enable elasticsearch on boot
+  sudo: yes
+  command: systemctl enable elasticsearch.service
+  when: (ansible_distribution == "CentOS" and ansible_distribution_major_version == "7")
+
+- name: Enable elasticsearch on boot
+  sudo: yes
+  command: chkconfig --add elasticsearch
+  when: ansible_distribution == "Amazon"

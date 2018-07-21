@@ -1,0 +1,9 @@
+---
+
+- name: Install docker-compose
+  sudo: yes
+  pip: name=docker-compose version=1.6.2
+
+- name: Create docker compositions
+  sudo: yes
+  file: path=/etc/docker-compose.d state=directory mode=0755

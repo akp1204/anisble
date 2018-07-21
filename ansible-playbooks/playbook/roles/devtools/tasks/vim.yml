@@ -1,0 +1,12 @@
+---
+
+- name: Install Luke's VIM
+  git: repo=git://github.com/lukecampbell/vim-folder dest="/home/{{user}}/.vim" accept_hostkey=true update=yes
+
+- name: Submodules
+  shell: git submodule update
+  args:
+    chdir: "/home/{{user}}/.vim"
+
+- name: Remove vim-go
+  file: path="/home/{{user}}/.vim/bundle/vim-go" state=absent

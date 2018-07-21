@@ -1,0 +1,17 @@
+---
+- name: Setup virtualenv-burrito for dev user
+  sudo: yes
+  sudo_user: "{{username}}"
+  shell: curl -sL https://raw.githubusercontent.com/brainsik/virtualenv-burrito/master/virtualenv-burrito.sh | /bin/bash
+  args:
+    chdir: "/home/{{username}}"
+    creates: "/home/{{username}}/.venvburrito/startup.sh"
+
+- name: Create virtualenv for dev user
+  sudo: yes
+  sudo_user: "{{username}}"
+  shell: source /home/{{username}}/.venvburrito/startup.sh && mkvirtualenv --no-site-packages --python=/usr/local/bin/python27 dev
+  args:
+    chdir: /home/{{username}}
+    creates: /home/{{username}}/.virtualenvs/dev
+

@@ -1,0 +1,12 @@
+[Unit]
+Description=GLOS Catalog Service
+Documentation=http://github.com/asascience-open/portal-catalog/
+After=network.target
+
+[Service]
+Type=simple
+User=myglos
+ExecStart=/bin/bash -c 'cd /var/www/html/glos-catalog; source /usr/local/lib/virtualenv/myglos/bin/activate; python app.py'
+
+[Install]
+WantedBy=multi-user.target

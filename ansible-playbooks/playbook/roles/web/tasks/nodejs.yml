@@ -1,0 +1,17 @@
+---
+- name: Download nodeJS source
+  get_url: url=http://nodejs.org/dist/v0.12.1/node-v0.12.1.tar.gz dest=/tmp/node-v0.12.1.tar.gz owner=root group=root force=no
+  sudo: yes
+
+- name: Extract source
+  command: /bin/tar -xzf /tmp/node-v0.12.1.tar.gz chdir=/usr/local/src creates=/usr/local/src/node-v0.12.1
+  sudo: yes
+
+- name: Make and install
+  shell: ./configure --prefix=/usr/local && /usr/bin/make && /usr/bin/make install chdir=/usr/local/src/node-v0.12.1 creates=/usr/local/bin/npm
+  sudo: yes
+
+- name: Install grunt-cli
+  shell: /usr/local/bin/npm install -g grunt-cli creates=/usr/local/bin/grunt
+  sudo: yes
+

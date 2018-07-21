@@ -1,0 +1,27 @@
+---
+- name: Copy Tomcat to {{ tomcat_dir }}
+  sudo: yes
+  sudo_user: tomcat
+  command: cp -r apache-tomcat-7.0.56 {{ tomcat_dir }}
+  args:
+    chdir: /var/tomcats/
+    creates: /var/tomcats/{{ tomcat_dir }}
+
+- name: Configure server.xml
+  sudo: yes
+  sudo_user: tomcat
+  template: src=server.xml.j2 dest=/var/tomcats/{{ tomcat_dir }}/conf/server.xml
+
+- name: Configure setenv.sh
+  sudo: yes
+  sudo_user: tomcat
+  template: src=setenv.sh.j2 dest=/var/tomcats/{{ tomcat_dir }}/bin/setenv.sh
+
+- name: Install init.d script
+  sudo: yes
+  template: src=initdscript.j2 dest=/etc/init.d/{{ tomcat_dir }}
+
+- name: Chmod init.d script
+  sudo: yes
+  shell: chmod +x /etc/init.d/{{ tomcat_dir }}
+

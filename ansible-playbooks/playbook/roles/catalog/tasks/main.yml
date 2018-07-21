@@ -1,0 +1,26 @@
+---
+
+- name: Install PostgreSQL client
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - postgresql-devel.x86_64
+
+- name: Make sure docker is started
+  sudo: yes
+  service: name=docker state=started
+
+- name: Install docker-py
+  sudo: yes
+  pip: name=docker-py version=1.2.3
+
+- name: Install psycopg2
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - python-psycopg2.x86_64
+
+- include: containers.yml
+- include: nginx.yml
+- include: firewall.yml
+

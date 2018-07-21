@@ -1,0 +1,8 @@
+export TOMCAT_HOME={{ tomcat_dir }}
+export JAVA_OPTS='-server -Djava.awt.headless=true -Xmx{{ tomcat_memory }} -Xms{{ tomcat_memory }}'
+
+# 4.5.x VERSIONS OF TDS NEED THIS
+export CONTENT_ROOT=-Dtds.content.root.path={{ tomcat_dir }}/content
+
+export CATALINA_PID=/var/tomcats/{{ tomcat_dir }}/temp/{{ tomcat_dir }}.pid
+

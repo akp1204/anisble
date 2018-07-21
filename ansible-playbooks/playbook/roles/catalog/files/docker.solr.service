@@ -1,0 +1,12 @@
+[Unit]
+Description=Apache Solr Container
+After=docker.service
+Requires=docker.service
+
+[Service]
+TimeoutStartSec=0
+ExecStart=/usr/bin/docker start -a solr
+ExecStop=/usr/bin/docker stop -t 2 solr
+
+[Install]
+WantedBy=multi-user.target

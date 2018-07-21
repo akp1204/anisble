@@ -1,0 +1,66 @@
+---
+
+- name: Download Fonts for ERDDAP
+  sudo: yes
+  sudo_user: tomcat
+  get_url: url=http://coastwatch.pfeg.noaa.gov/erddap/download/BitstreamVeraSans.zip dest=/var/tomcats/BitstreamVeraSans.zip
+
+- name: Install Fonts for ERDDAP
+  sudo: yes
+  shell: mkdir /tmp/fonts && unzip BitstreamVeraSans.zip -d /tmp/fonts && mv /tmp/fonts "{{ ansible_env.JAVA_HOME }}/lib/"
+  args:
+    chdir: /var/tomcats/
+    creates: "{{ ansible_env.JAVA_HOME }}/lib/fonts"
+
+- name: Download ERDDAP content
+  sudo: yes
+  sudo_user: tomcat
+  get_url: url=http://coastwatch.pfeg.noaa.gov/erddap/download/erddapContent.zip dest=/var/tomcats/erddapContent.zip
+
+- name: Download ERDDAP war
+  sudo: yes
+  sudo_user: tomcat
+  get_url: url=http://coastwatch.pfeg.noaa.gov/erddap/download/erddap.war dest=/var/tomcats/erddap.war
+
+- name: Extract ERDDAP content to {{ tomcat_dir }}
+  sudo: yes
+  sudo_user: tomcat
+  shell: unzip erddapContent.zip -d "{{ tomcat_dir }}"
+  args:
+    chdir: /var/tomcats/
+    creates: "{{ tomcat_dir }}/content/erddap"
+
+- name: Configure setup.xml
+  sudo: yes
+  sudo_user: tomcat
+  template: src=erddap-setup.xml.j2 dest=/var/tomcats/{{ tomcat_dir }}/content/erddap/setup.xml
+
+- name: Ensure data root
+  sudo: yes
+  file: path=/data/data/{{ catalog_name }} mode=0755 state=directory owner=tomcat group=data
+
+- name: Ensure catalog root
+  sudo: yes
+  file: path=/data/catalog/{{ catalog_name }} mode=0755 state=directory owner=tomcat group=data
+
+- name: Symlink datasets.xml
+  sudo: yes
+  sudo_user: tomcat
+  file: force=yes state=link path=/var/tomcats/{{ tomcat_dir }}/content/erddap/datasets.xml src=/data/catalog/{{ catalog_name }}/datasets.xml
+
+- name: Copy ERDDAP war to {{ tomcat_dir }}
+  sudo: yes
+  sudo_user: tomcat
+  shell: cp erddap.war {{ tomcat_dir }}/webapps/
+  args:
+    chdir: /var/tomcats/
+    creates: "{{ tomcat_dir }}/webapps/erddap.war"
+
+- name: Ensure ERDDAP scratch dir
+  sudo: yes
+  file: path=/scratch/{{tomcat_dir}} state=directory mode=0775 owner=tomcat group=data
+
+- name: File Permissions for flag dir
+  sudo: yes
+  file: path="/scratch/{{ tomcat_dir }}/flag" mode=0777 state=directory
+

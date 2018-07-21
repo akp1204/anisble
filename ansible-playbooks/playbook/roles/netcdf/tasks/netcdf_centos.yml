@@ -1,0 +1,8 @@
+---
+- name: Install netcdf
+  sudo: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - netcdf.x86_64
+    - netcdf-devel.x86_64
+
